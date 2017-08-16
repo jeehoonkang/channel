@@ -1,5 +1,5 @@
 extern crate channel;
-extern crate crossbeam;
+extern crate crossbeam_epoch as epoch;
 
 use channel::{Sender, Receiver};
 
@@ -22,7 +22,7 @@ fn seq<F: Fn() -> RxTx>(make: F) {
 fn spsc<F: Fn() -> RxTx>(make: F) {
     let (tx, rx) = make();
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(|| {
             for i in 0..MESSAGES {
                 tx.send(i as i32).unwrap();
@@ -39,7 +39,7 @@ fn spsc<F: Fn() -> RxTx>(make: F) {
 fn mpsc<F: Fn() -> RxTx>(make: F) {
     let (tx, rx) = make();
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         for _ in 0..THREADS {
             s.spawn(|| {
                 for i in 0..MESSAGES / THREADS {
@@ -58,7 +58,7 @@ fn mpsc<F: Fn() -> RxTx>(make: F) {
 fn mpmc<F: Fn() -> RxTx>(make: F) {
     let (tx, rx) = make();
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         for _ in 0..THREADS {
             s.spawn(|| {
                 for i in 0..MESSAGES / THREADS {
@@ -79,7 +79,7 @@ fn mpmc<F: Fn() -> RxTx>(make: F) {
 fn select_rx<F: Fn() -> RxTx>(make: F) {
     let chans = (0..THREADS).map(|_| make()).collect::<Vec<_>>();
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         for &(ref tx, _) in &chans {
             s.spawn(move || {
                 for i in 0..MESSAGES / THREADS {
@@ -105,7 +105,7 @@ fn select_rx<F: Fn() -> RxTx>(make: F) {
 fn select_both<F: Fn() -> RxTx>(make: F) {
     let chans = (0..THREADS).map(|_| make()).collect::<Vec<_>>();
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         for _ in 0..THREADS {
             s.spawn(|| {
                 for i in 0..MESSAGES / THREADS {

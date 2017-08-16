@@ -1,5 +1,5 @@
 extern crate channel;
-extern crate crossbeam;
+extern crate crossbeam_epoch as epoch;
 
 use channel::{bounded, unbounded};
 
@@ -15,7 +15,7 @@ fn nested_recv_iter() {
     let (tx, rx) = unbounded::<i32>();
     let (total_tx, total_rx) = unbounded::<i32>();
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             let mut acc = 0;
             for x in rx.iter() {
@@ -37,7 +37,7 @@ fn recv_iter_break() {
     let (tx, rx) = unbounded::<i32>();
     let (count_tx, count_rx) = unbounded();
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             let mut count = 0;
             for x in rx.iter() {
@@ -64,7 +64,7 @@ fn recv_try_iter() {
     let (request_tx, request_rx) = unbounded();
     let (response_tx, response_rx) = unbounded();
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         // Request `x`s until we have `6`.
         s.spawn(move || {
             let mut count = 0;

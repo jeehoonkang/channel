@@ -1,5 +1,4 @@
-extern crate coco;
-extern crate crossbeam;
+extern crate crossbeam_epoch as epoch;
 extern crate parking_lot;
 extern crate rand;
 

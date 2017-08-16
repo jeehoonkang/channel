@@ -1,5 +1,5 @@
 extern crate channel;
-extern crate crossbeam;
+extern crate crossbeam_epoch as epoch;
 extern crate rand;
 
 use std::sync::Arc;
@@ -43,7 +43,7 @@ fn capacity() {
 fn recv() {
     let (tx, rx) = bounded(100);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             assert_eq!(rx.recv(), Ok(7));
             thread::sleep(ms(1000));
@@ -65,7 +65,7 @@ fn recv() {
 fn recv_timeout() {
     let (tx, rx) = bounded(100);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             assert_eq!(rx.recv_timeout(ms(1000)), Err(RecvTimeoutError::Timeout));
             assert_eq!(rx.recv_timeout(ms(1000)), Ok(7));
@@ -85,7 +85,7 @@ fn recv_timeout() {
 fn try_recv() {
     let (tx, rx) = bounded(100);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             assert_eq!(rx.try_recv(), Err(TryRecvError::Empty));
             thread::sleep(ms(1500));
@@ -104,7 +104,7 @@ fn try_recv() {
 fn send() {
     let (tx, rx) = bounded(1);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             assert_eq!(tx.send(7), Ok(()));
             thread::sleep(ms(1000));
@@ -127,7 +127,7 @@ fn send() {
 fn send_timeout() {
     let (tx, rx) = bounded(2);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             assert_eq!(tx.send_timeout(1, ms(1000)), Ok(()));
             assert_eq!(tx.send_timeout(2, ms(1000)), Ok(()));
@@ -154,7 +154,7 @@ fn send_timeout() {
 fn try_send() {
     let (tx, rx) = bounded(1);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             assert_eq!(tx.try_send(1), Ok(()));
             assert_eq!(tx.try_send(2), Err(TrySendError::Full(2)));
@@ -248,7 +248,7 @@ fn len() {
     assert_eq!(tx.len(), 0);
     assert_eq!(rx.len(), 0);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(|| for i in 0..COUNT {
             assert_eq!(rx.recv(), Ok(i));
             let len = rx.len();
@@ -270,7 +270,7 @@ fn len() {
 fn close_signals_sender() {
     let (tx, rx) = bounded(1);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             assert_eq!(tx.send(()), Ok(()));
             assert_eq!(tx.send(()), Err(SendError(())));
@@ -286,7 +286,7 @@ fn close_signals_sender() {
 fn close_signals_receiver() {
     let (tx, rx) = bounded::<()>(1);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             assert_eq!(rx.recv(), Err(RecvError));
         });
@@ -303,7 +303,7 @@ fn spsc() {
 
     let (tx, rx) = bounded(3);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             for i in 0..COUNT {
                 assert_eq!(rx.recv(), Ok(i));
@@ -324,7 +324,7 @@ fn mpmc() {
     let (tx, rx) = bounded::<usize>(3);
     let v = (0..COUNT).map(|_| AtomicUsize::new(0)).collect::<Vec<_>>();
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         for _ in 0..THREADS {
             s.spawn(|| for i in 0..COUNT {
                 let n = rx.recv().unwrap();
@@ -349,7 +349,7 @@ fn stress_timeout_two_threads() {
 
     let (tx, rx) = bounded(2);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(|| for i in 0..COUNT {
             if i % 2 == 0 {
                 thread::sleep(ms(500));
@@ -396,7 +396,7 @@ fn drops() {
         DROPS.store(0, SeqCst);
         let (tx, rx) = bounded::<DropCounter>(50);
 
-        crossbeam::scope(|s| {
+        epoch::util::scoped::scope(|s| {
             s.spawn(|| for _ in 0..steps {
                 rx.recv().unwrap();
             });

@@ -1,5 +1,5 @@
 extern crate channel;
-extern crate crossbeam;
+extern crate crossbeam_epoch as epoch;
 
 use std::any::Any;
 use std::thread;
@@ -87,7 +87,7 @@ fn disconnected() {
     let (tx1, rx1) = unbounded::<i32>();
     let (tx2, rx2) = unbounded::<i32>();
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(|| {
             thread::sleep(ms(500));
             drop(tx1);
@@ -110,7 +110,7 @@ fn disconnected() {
         }
     });
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(|| {
             thread::sleep(ms(500));
             drop(tx2);
@@ -212,7 +212,7 @@ fn timeout() {
     let (tx1, rx1) = unbounded::<i32>();
     let (tx2, rx2) = unbounded::<i32>();
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(|| {
             thread::sleep(ms(1500));
             tx2.send(2);
@@ -255,7 +255,7 @@ fn unblocks() {
     let (tx1, rx1) = bounded(0);
     let (tx2, rx2) = bounded(0);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(|| {
             thread::sleep(ms(500));
             tx2.send(2);
@@ -276,7 +276,7 @@ fn unblocks() {
         }
     });
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(|| {
             thread::sleep(ms(500));
             assert_eq!(rx1.recv().unwrap(), 1);
@@ -305,7 +305,7 @@ fn both_ready() {
     let (tx1, rx1) = bounded(0);
     let (tx2, rx2) = bounded(0);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(|| {
             thread::sleep(ms(500));
             tx1.send(1).unwrap();
@@ -337,7 +337,7 @@ fn no_starvation() {
     let done_tx = &(0..N).map(|_| AtomicBool::new(false)).collect::<Vec<_>>();
 
     while !done_rx.iter().all(|x| x.load(SeqCst)) || !done_tx.iter().all(|x| x.load(SeqCst)) {
-        crossbeam::scope(|s| {
+        epoch::util::scoped::scope(|s| {
             let rxs = (0..N)
                 .map(|i| {
                     let (tx, rx) = unbounded();
@@ -387,7 +387,7 @@ fn loop_try() {
         let (tx1, rx1) = bounded::<i32>(0);
         let (tx2, rx2) = bounded::<i32>(0);
 
-        crossbeam::scope(|s| {
+        epoch::util::scoped::scope(|s| {
             s.spawn(|| loop {
                 match tx1.try_send(1) {
                     Ok(()) => break,
@@ -438,7 +438,7 @@ fn loop_try() {
 
 #[test]
 fn cloning1() {
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         let mut iters = 0;
         let (tx1, rx1) = unbounded::<i32>();
         let (_tx2, rx2) = unbounded::<i32>();
@@ -470,7 +470,7 @@ fn cloning1() {
 
 #[test]
 fn cloning2() {
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         let mut iters = 0;
         let (tx1, rx1) = unbounded::<()>();
         let (tx2, rx2) = unbounded::<()>();
@@ -554,7 +554,7 @@ fn stress_recv() {
     let (tx2, rx2) = bounded(5);
     let (tx3, rx3) = bounded(100);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(|| for i in 0..10_000 {
             tx1.send(i);
             rx3.recv().unwrap();
@@ -593,7 +593,7 @@ fn stress_send() {
     let (tx2, rx2) = bounded(0);
     let (tx3, rx3) = bounded(100);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(|| for i in 0..10_000 {
             assert_eq!(rx1.recv().unwrap(), i);
             assert_eq!(rx2.recv().unwrap(), i);
@@ -627,7 +627,7 @@ fn stress_mixed() {
     let (tx2, rx2) = bounded(0);
     let (tx3, rx3) = bounded(100);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(|| for i in 0..10_000 {
             tx1.send(i).unwrap();
             assert_eq!(rx2.recv().unwrap(), i);
@@ -662,7 +662,7 @@ fn stress_timeout_two_threads() {
 
     let (tx, rx) = bounded(2);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(|| for i in 0..COUNT {
             if i % 2 == 0 {
                 thread::sleep(ms(500));
@@ -820,7 +820,7 @@ fn recv() {
     let tx = WrappedSender(tx);
     let rx = WrappedReceiver(rx);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             assert_eq!(rx.recv(), Ok(7));
             thread::sleep(ms(1000));
@@ -841,7 +841,7 @@ fn recv() {
     let tx = WrappedSender(tx);
     let rx = WrappedReceiver(rx);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             assert_eq!(rx.recv(), Ok(7));
             thread::sleep(ms(1000));
@@ -865,7 +865,7 @@ fn recv_timeout() {
     let tx = WrappedSender(tx);
     let rx = WrappedReceiver(rx);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             assert_eq!(rx.recv_timeout(ms(1000)), Err(RecvTimeoutError::Timeout));
             assert_eq!(rx.recv_timeout(ms(1000)), Ok(7));
@@ -887,7 +887,7 @@ fn try_recv() {
     let tx = WrappedSender(tx);
     let rx = WrappedReceiver(rx);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             assert_eq!(rx.try_recv(), Err(TryRecvError::Empty));
             thread::sleep(ms(1500));
@@ -905,7 +905,7 @@ fn try_recv() {
     let tx = WrappedSender(tx);
     let rx = WrappedReceiver(rx);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             assert_eq!(rx.recv_timeout(ms(1000)), Err(RecvTimeoutError::Timeout));
             assert_eq!(rx.recv_timeout(ms(1000)), Ok(7));
@@ -927,7 +927,7 @@ fn send() {
     let tx = WrappedSender(tx);
     let rx = WrappedReceiver(rx);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             assert_eq!(tx.send(7), Ok(()));
             thread::sleep(ms(1000));
@@ -949,7 +949,7 @@ fn send() {
     let tx = WrappedSender(tx);
     let rx = WrappedReceiver(rx);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             assert_eq!(tx.send(7), Ok(()));
             thread::sleep(ms(1000));
@@ -973,7 +973,7 @@ fn send_timeout() {
     let tx = WrappedSender(tx);
     let rx = WrappedReceiver(rx);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             assert_eq!(tx.send_timeout(1, ms(1000)), Ok(()));
             assert_eq!(tx.send_timeout(2, ms(1000)), Ok(()));
@@ -999,7 +999,7 @@ fn send_timeout() {
     let tx = WrappedSender(tx);
     let rx = WrappedReceiver(rx);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             assert_eq!(
                 tx.send_timeout(7, ms(1000)),
@@ -1024,7 +1024,7 @@ fn try_send() {
     let tx = WrappedSender(tx);
     let rx = WrappedReceiver(rx);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             assert_eq!(tx.try_send(1), Ok(()));
             assert_eq!(tx.try_send(2), Err(TrySendError::Full(2)));
@@ -1045,7 +1045,7 @@ fn try_send() {
     let tx = WrappedSender(tx);
     let rx = WrappedReceiver(rx);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             assert_eq!(tx.try_send(7), Err(TrySendError::Full(7)));
             thread::sleep(ms(1500));
@@ -1083,7 +1083,7 @@ fn matching() {
     let (tx, rx) = channel::bounded(0);
     let (tx, rx) = (&tx, &rx);
 
-    crossbeam::scope(|s| for i in 0..44 {
+    epoch::util::scoped::scope(|s| for i in 0..44 {
         s.spawn(move || loop {
             if let Ok(x) = rx.select() {
                 assert_ne!(i, x);
@@ -1103,7 +1103,7 @@ fn matching_with_leftover() {
     let (tx, rx) = channel::bounded(1);
     let (tx, rx) = (&tx, &rx);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         for i in 0..55 {
             s.spawn(move || loop {
                 if let Ok(x) = rx.select() {
@@ -1130,7 +1130,7 @@ fn channel_through_channel() {
     for cap in 0..3 {
         let (tx, rx) = channel::bounded::<T>(cap);
 
-        crossbeam::scope(|s| {
+        epoch::util::scoped::scope(|s| {
             s.spawn(move || {
                 let mut tx = tx;
 

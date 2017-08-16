@@ -1,6 +1,6 @@
 #![feature(mpsc_select)]
 
-extern crate crossbeam;
+extern crate crossbeam_epoch as epoch;
 
 use std::sync::mpsc;
 
@@ -32,7 +32,7 @@ fn seq_sync(cap: usize) {
 fn spsc_async() {
     let (tx, rx) = mpsc::channel::<i32>();
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             for i in 0..MESSAGES {
                 tx.send(i as i32).unwrap();
@@ -49,7 +49,7 @@ fn spsc_async() {
 fn spsc_sync(cap: usize) {
     let (tx, rx) = mpsc::sync_channel::<i32>(cap);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             for i in 0..MESSAGES {
                 tx.send(i as i32).unwrap();
@@ -66,7 +66,7 @@ fn spsc_sync(cap: usize) {
 fn mpsc_async() {
     let (tx, rx) = mpsc::channel::<i32>();
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         for _ in 0..THREADS {
             let tx = tx.clone();
             s.spawn(move || {
@@ -86,7 +86,7 @@ fn mpsc_async() {
 fn mpsc_sync(cap: usize) {
     let (tx, rx) = mpsc::sync_channel::<i32>(cap);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         for _ in 0..THREADS {
             let tx = tx.clone();
             s.spawn(move || {
@@ -106,7 +106,7 @@ fn mpsc_sync(cap: usize) {
 fn select_rx_async() {
     let chans = (0..THREADS).map(|_| mpsc::channel::<i32>()).collect::<Vec<_>>();
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         for &(ref tx, _) in &chans {
             let tx = tx.clone();
             s.spawn(move || {
@@ -138,7 +138,7 @@ fn select_rx_async() {
 fn select_rx_sync(cap: usize) {
     let chans = (0..THREADS).map(|_| mpsc::sync_channel::<i32>(cap)).collect::<Vec<_>>();
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         for &(ref tx, _) in &chans {
             let tx = tx.clone();
             s.spawn(move || {

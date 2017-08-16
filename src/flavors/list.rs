@@ -9,7 +9,7 @@ use std::sync::atomic::Ordering::{AcqRel, Acquire, Relaxed, SeqCst};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use coco::epoch::{self, Atomic, Owned};
+use epoch::{self, Atomic, Owned};
 
 use CaseId;
 use actor;
@@ -108,7 +108,7 @@ impl<T> Channel<T> {
                             let value = ptr::read(&next.deref().value);
 
                             if self.head
-                                .compare_and_swap(head.with_tag(USE), next, SeqCst, scope)
+                                .compare_and_set(head.with_tag(USE), next, SeqCst, scope)
                                 .is_ok()
                             {
                                 self.recv_count.fetch_add(1, SeqCst);
@@ -137,7 +137,7 @@ impl<T> Channel<T> {
                         }
                     } else {
                         if self.head
-                            .compare_and_swap(head, next.with_tag(MULTI), SeqCst, scope)
+                            .compare_and_set(head, next.with_tag(MULTI), SeqCst, scope)
                             .is_ok()
                         {
                             self.recv_count.fetch_add(1, SeqCst);

@@ -1,4 +1,4 @@
-extern crate crossbeam;
+extern crate crossbeam_epoch as epoch;
 extern crate multiqueue;
 
 use std::thread;
@@ -20,7 +20,7 @@ fn seq(cap: usize) {
 fn spsc(cap: usize) {
     let (tx, rx) = multiqueue::mpmc_queue::<i32>(cap as u64);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scoped::scope(|s| {
         s.spawn(move || {
             for i in 0..MESSAGES {
                 while tx.try_send(i as i32).is_err() {
@@ -39,7 +39,7 @@ fn spsc(cap: usize) {
 fn mpsc(cap: usize) {
     let (tx, rx) = multiqueue::mpmc_queue::<i32>(cap as u64);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         for _ in 0..THREADS {
             let tx = tx.clone();
             s.spawn(move || {
@@ -61,7 +61,7 @@ fn mpsc(cap: usize) {
 fn mpmc(cap: usize) {
     let (tx, rx) = multiqueue::mpmc_queue::<i32>(cap as u64);
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         for _ in 0..THREADS {
             let tx = tx.clone();
             s.spawn(move || {

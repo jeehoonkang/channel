@@ -5,7 +5,6 @@ authors = ["Stjepan Glavina <stjepang@gmail.com>"]
 license = "Apache-2.0/MIT"
 
 [dependencies]
-coco = "0.2.0"
-crossbeam = "0.3.0"
+crossbeam-epoch = { git = "https://github.com/jeehoonkang/crossbeam-epoch", branch = "channel" }
 parking_lot = "0.4.4"
 rand = "0.3"

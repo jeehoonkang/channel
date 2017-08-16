@@ -5,7 +5,7 @@ version = "0.1.0"
 [dependencies]
 chan = "0.1.19"
 channel = { path = ".." }
-crossbeam = "0.3.0"
+crossbeam-epoch = { git = "https://github.com/jeehoonkang/crossbeam-epoch", branch = "channel" }
 multiqueue = "0.3.2"
 
 [[bin]]

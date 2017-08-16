@@ -1,5 +1,5 @@
 extern crate channel;
-extern crate crossbeam;
+extern crate crossbeam_epoch as epoch;
 extern crate rand;
 
 use std::sync::Arc;
@@ -36,7 +36,7 @@ fn smoke() {
 fn recv() {
     let (tx, rx) = unbounded();
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             assert_eq!(rx.recv(), Ok(7));
             thread::sleep(ms(1000));
@@ -58,7 +58,7 @@ fn recv() {
 fn recv_timeout() {
     let (tx, rx) = unbounded();
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             assert_eq!(rx.recv_timeout(ms(1000)), Err(RecvTimeoutError::Timeout));
             assert_eq!(rx.recv_timeout(ms(1000)), Ok(7));
@@ -78,7 +78,7 @@ fn recv_timeout() {
 fn try_recv() {
     let (tx, rx) = unbounded();
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             assert_eq!(rx.try_recv(), Err(TryRecvError::Empty));
             thread::sleep(ms(1500));
@@ -171,7 +171,7 @@ fn len() {
 fn close_signals_receiver() {
     let (tx, rx) = unbounded::<()>();
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             assert_eq!(rx.recv(), Err(RecvError));
         });
@@ -188,7 +188,7 @@ fn spsc() {
 
     let (tx, rx) = unbounded();
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(move || {
             for i in 0..COUNT {
                 assert_eq!(rx.recv(), Ok(i));
@@ -209,7 +209,7 @@ fn mpmc() {
     let (tx, rx) = unbounded::<usize>();
     let v = (0..COUNT).map(|_| AtomicUsize::new(0)).collect::<Vec<_>>();
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         for _ in 0..THREADS {
             s.spawn(|| for i in 0..COUNT {
                 let n = rx.recv().unwrap();
@@ -236,7 +236,7 @@ fn stress_timeout_two_threads() {
 
     let (tx, rx) = unbounded();
 
-    crossbeam::scope(|s| {
+    epoch::util::scoped::scope(|s| {
         s.spawn(|| for i in 0..COUNT {
             if i % 2 == 0 {
                 thread::sleep(ms(500));
@@ -279,7 +279,7 @@ fn drops() {
         DROPS.store(0, SeqCst);
         let (tx, rx) = unbounded::<DropCounter>();
 
-        crossbeam::scope(|s| {
+        epoch::util::scoped::scope(|s| {
             s.spawn(|| for _ in 0..steps {
                 rx.recv().unwrap();
             });

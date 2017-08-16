@@ -32,7 +32,7 @@ func Seek(name string, match chan string, wg *sync.WaitGroup) {
 }
 */
 
-extern crate crossbeam;
+extern crate crossbeam_epoch as epoch;
 extern crate channel;
 
 use channel::{Receiver, Sender};
@@ -42,7 +42,7 @@ fn main() {
     let (tx, rx) = channel::bounded(1); // Make room for one unmatched send.
     let (tx, rx) = (&tx, &rx);
 
-    crossbeam::scope(|s| for name in people {
+    epoch::util::scoped::scope(|s| for name in people {
         s.spawn(move || seek(name, tx, rx));
     });
 
